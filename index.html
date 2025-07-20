@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autism Detector - Full Stack</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- You can still keep your custom style.css if you have specific overrides -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal text-gray-800">
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.14.0/babel.min.js"></script>
+    {% raw %}
+    <script type="text/babel">
+        // DashboardPage Component (your existing prediction logic)
+        const DashboardPage = () => {
+            const [imageFile, setImageFile] = React.useState(null);
+            const [biomedicalData, setBiomedicalData] = React.useState({
+                eeg: '',
+                heartRate: '',
+                cholesterol: '',
+                developmentalMilestones: '',
+                socialInteraction: '',
+                repetitiveBehaviors: ''
+            });
+            const [predictionResult, setPredictionResult] = React.useState(null);
+            const [imagePath, setImagePath] = React.useState(null);
+            const [loading, setLoading] = React.useState(false);
+            const [error, setError] = React.useState(null);
+
+            const handleImageChange = (e) => {
+                setImageFile(e.target.files[0]);
+            };
+
+            const handleBiomedicalChange = (e) => {
+                const { name, value } = e.target;
+                setBiomedicalData(prevData => ({
+                    ...prevData,
+                    [name]: value
+                }));
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                setError(null);
+                setPredictionResult(null);
+                setImagePath(null);
+
+                const formData = new FormData();
+                if (imageFile) {
+                    formData.append('image', imageFile);
+                }
+                formData.append('biomedicalData', JSON.stringify(biomedicalData));
+
+                try {
+                    const response = await fetch('/predict', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Prediction failed');
+                    }
+
+                    const data = await response.json();
+                    setPredictionResult(data);
+                    setImagePath(data.image_path);
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
+                    <h2 className="text-3xl font-bold mb-6 text-center text-blue-700">Autism Prediction Dashboard</h2>
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="mb-4">
+                            <label htmlFor="imageUpload" className="block text-gray-700 text-sm font-bold mb-2">Upload Image (Optional):</label>
+                            <input
+                                type="file"
+                                id="imageUpload"
+                                name="image"
+                                accept="image/*"
+                                onChange={handleImageChange}
+                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-gray-700 text-sm font-bold mb-2">Biomedical Quantities (Optional):</label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <input
+                                    type="number"
+                                    name="eeg"
+                                    placeholder="EEG Score (e.g., 1-10)"
+                                    value={biomedicalData.eeg}
+                                    onChange={handleBiomedicalChange}
+                                    className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                />
+                                <input
+                                    type="number"
+                                    name="heartRate"
+                                    placeholder="Heart Rate (bpm)"
+                                    value={biomedicalData.heartRate}
+                                    onChange={handleBiomedicalChange}
+                                    className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                />
+                                <input
+                                    type="number"
+                                    name="cholesterol"
+                                    placeholder="Cholesterol Level (mg/dL)"
+                                    value={biomedicalData.cholesterol}
+                                    onChange={handleBiomedicalChange}
+                                    className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                />
+                                <input
+                                    type="text"
+                                    name="developmentalMilestones"
+                                    placeholder="Developmental Milestones (e.g., delayed speech)"
+                                    value={biomedicalData.developmentalMilestones}
+                                    onChange={handleBiomedicalChange}
+                                    className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                />
+                                <input
+                                    type="text"
+                                    name="socialInteraction"
+                                    placeholder="Social Interaction (e.g., limited eye contact)"
+                                    value={biomedicalData.socialInteraction}
+                                    onChange={handleBiomedicalChange}
+                                    className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                />
+                                <input
+                                    type="text"
+                                    name="repetitiveBehaviors"
+                                    placeholder="Repetitive Behaviors (e.g., hand flapping)"
+                                    value={biomedicalData.repetitiveBehaviors}
+                                    onChange={handleBiomedicalChange}
+                                    className="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                />
+                            </div>
+                        </div>
+
+                        <button
+                            type="submit"
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:shadow-outline w-full transition duration-300 ease-in-out transform hover:scale-105"
+                            disabled={loading}
+                        >
+                            {loading ? 'Predicting...' : 'Predict Autism'}
+                        </button>
+                    </form>
+
+                    {error && <p className="text-red-600 text-center mt-4 text-lg font-semibold">{error}</p>}
+
+                    {predictionResult && (
+                        <div className="mt-8 p-6 border border-blue-400 rounded-lg bg-blue-50">
+                            <h3 className="text-2xl font-semibold mb-3 text-blue-800">Prediction Results:</h3>
+                            {predictionResult.image_prediction && (
+                                <p className="text-lg mb-1"><span className="font-semibold">Image Prediction:</span> <span className="text-blue-900">{predictionResult.image_prediction}</span></p>
+                            )}
+                            {predictionResult.biomedical_prediction && (
+                                <p className="text-lg mb-1"><span className="font-semibold">Biomedical Prediction:</span> <span className="text-blue-900">{predictionResult.biomedical_prediction}</span></p>
+                            )}
+                            {predictionResult.combined_prediction && (
+                                <p className="text-xl font-bold mt-3 text-blue-900">Combined Prediction: {predictionResult.combined_prediction}</p>
+                            )}
+                            {imagePath && (
+                                <div className="mt-6 text-center">
+                                    <h4 className="text-lg font-semibold mb-2">Uploaded Image:</h4>
+                                    <img src={imagePath} alt="Uploaded" className="max-w-xs mx-auto rounded-lg shadow-md border border-gray-300" />
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // AboutPage Component (Project Description and Healthy Tips)
+        const AboutPage = () => {
+            const [healthyTips, setHealthyTips] = React.useState([]);
+
+            React.useEffect(() => {
+                const fetchHealthyTips = async () => {
+                    try {
+                        const response = await fetch('/healthy-tips');
+                        const data = await response.json();
+                        setHealthyTips(data.tips);
+                    } catch (err) {
+                        console.error("Failed to fetch healthy tips:", err);
+                    }
+                };
+                fetchHealthyTips();
+            }, []);
+
+            return (
+                <div className="bg-white p-8 rounded-lg shadow-lg mb-8">
+                    <h2 className="text-3xl font-bold mb-6 text-center text-blue-700">About This Project</h2>
+
+                    <section className="mb-8">
+                        <h3 className="text-2xl font-semibold mb-3 text-gray-800">Project Details</h3>
+                        <p className="text-gray-700 leading-relaxed">
+                            This project aims to create a comprehensive and user-friendly system for the early detection of Autism Spectrum Disorder (ASD). Leveraging the power of machine learning, it combines two crucial data sources: <strong>image analysis</strong> (specifically facial features and expressions) and <strong>biomedical quantities</strong> (such as EEG, heart rate, and cholesterol levels). The goal is to provide a more accurate and holistic prediction, supporting timely interventions and better outcomes for individuals.
+                        </p>
+                        <p className="text-gray-700 leading-relaxed mt-3">
+                            Early detection is critical for autism, as it allows for the implementation of early intervention strategies, which have been shown to significantly improve developmental trajectories. By integrating diverse data types, this tool strives to enhance the reliability of preliminary assessments.
+                        </p>
+                    </section>
+
+                    <section className="mb-8">
+                        <h3 className="text-2xl font-semibold mb-3 text-gray-800">Healthy Tips for Autism (If Detected)</h3>
+                        <ul className="list-disc list-inside text-gray-700 space-y-2">
+                            {healthyTips.map((tip, index) => (
+                                <li key={index} dangerouslySetInnerHTML={{ __html: tip }}></li>
+                            ))}
+                        </ul>
+                    </section>
+                </div>
+            );
+        };
+
+        // HowItWorksPage Component
+        const HowItWorksPage = () => {
+            return (
+                <div className="bg-white p-8 rounded-lg shadow-lg mb-8">
+                    <h2 className="text-3xl font-bold mb-6 text-center text-blue-700">How This Website Works</h2>
+
+                    <section>
+                        <h3 className="text-2xl font-semibold mb-3 text-gray-800">Using the Autism Detector</h3>
+                        <div className="space-y-4 text-gray-700">
+                            <p>
+                                This web application provides a user-friendly interface to assist in the preliminary assessment of Autism Spectrum Disorder (ASD) by combining image analysis and biomedical data.
+                            </p>
+                            <p>
+                                <strong>1. Navigate to the Dashboard:</strong> Click on the "Dashboard" link in the navigation bar to access the prediction interface.
+                            </p>
+                            <p>
+                                <strong>2. Upload an Image (Optional):</strong> In the "Autism Prediction Dashboard" section, you can upload a facial image. This image will be analyzed by a pre-trained machine learning model to identify visual cues.
+                                <ul>
+                                    <li className="ml-4 mt-1">Click "Choose File" and select an image from your device.</li>
+                                </ul>
+                            </p>
+                            <p>
+                                <strong>3. Enter Biomedical Quantities (Optional):</strong> Below the image upload, you'll find fields for various biomedical quantities. These inputs help refine the prediction.
+                                <ul>
+                                    <li className="ml-4 mt-1"><strong>EEG Score:</strong> Enter a numerical value (e.g., on a scale of 1-10).</li>
+                                    <li className="ml-4 mt-1"><strong>Heart Rate:</strong> Input the heart rate in beats per minute (bpm).</li>
+                                    <li className="ml-4 mt-1"><strong>Cholesterol Level:</strong> Provide the cholesterol level in mg/dL.</li>
+                                    <li className="ml-4 mt-1"><strong>Developmental Milestones:</strong> Describe any observed delays (e.g., "delayed speech," "late walking").</li>
+                                    <li className="ml-4 mt-1"><strong>Social Interaction:</strong> Note any specific patterns (e.g., "limited eye contact," "prefers solitary play").</li>
+                                    <li className="ml-4 mt-1"><strong>Repetitive Behaviors:</strong> Mention any repetitive actions (e.g., "hand flapping," "rocking").</li>
+                                    <li className="ml-4 mt-1 font-semibold">You can fill in as many fields as you have data for. Leaving fields blank will default them to a neutral value (0 for numbers).</li>
+                                </ul>
+                            </p>
+                            <p>
+                                <strong>4. Get Prediction:</strong> After uploading an image and/or entering biomedical data, click the "Predict Autism" button. The system will process the inputs and display the individual image prediction, biomedical prediction, and a combined overall prediction.
+                            </p>
+                            <p>
+                                <strong>5. Explore Information:</strong>
+                                <ul>
+                                    <li className="ml-4 mt-1"><strong>About Project:</strong> Learn more about the project's purpose and general healthy tips.</li>
+                                    <li className="ml-4 mt-1"><strong>Creators:</strong> Find details about the team behind this project.</li>
+                                </ul>
+                            </p>
+                            <p className="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 rounded">
+                                <strong>Disclaimer:</strong> This tool is for preliminary assessment purposes only and should not replace professional medical diagnosis. Always consult with a qualified healthcare professional for accurate diagnosis and personalized advice.
+                            </p>
+                        </div>
+                    </section>
+                </div>
+            );
+        };
+
+        // CreatorsPage Component
+        const CreatorsPage = () => {
+            const [creatorDetails, setCreatorDetails] = React.useState(null);
+
+            React.useEffect(() => {
+                const fetchCreatorDetails = async () => {
+                    try {
+                        const response = await fetch('/creator-details');
+                        const data = await response.json();
+                        setCreatorDetails(data.details);
+                    } catch (err) {
+                        console.error("Failed to fetch creator details:", err);
+                    }
+                };
+                fetchCreatorDetails();
+            }, []);
+
+            return (
+                <div className="bg-white p-8 rounded-lg shadow-lg mb-8">
+                    <h2 className="text-3xl font-bold mb-6 text-center text-blue-700">Project Creators</h2>
+                    {creatorDetails && (
+                        <div className="flex flex-wrap justify-center gap-6"> {/* Use flex-wrap to allow items to wrap to next line if space is limited */}
+                            {creatorDetails.Creators.map((creator, index) => {
+                                const isGroupLeader = creator.Role === 'Group Leader';
+                                const imageSizeClass = isGroupLeader ? 'w-32 h-32' : 'w-24 h-24';
+                                const textSizeClass = isGroupLeader ? 'text-2xl font-bold text-blue-800' : 'text-xl font-semibold text-blue-700';
+                                const cardBgClass = isGroupLeader ? 'bg-blue-50' : 'bg-gray-50';
+                                const borderClass = isGroupLeader ? 'border-4 border-blue-600' : 'border-2 border-blue-400';
+
+                                return (
+                                    <div
+                                        key={index}
+                                        className={`flex flex-col items-center p-4 rounded-lg shadow-sm transition-all duration-300 ease-in-out transform hover:scale-105 ${cardBgClass}`}
+                                        style={{ minWidth: '180px', maxWidth: '250px' }} /* Added min/max width for better control in a row */
+                                    >
+                                        <img
+                                            src={creator.Image}
+                                            alt={creator.Name}
+                                            className={`${imageSizeClass} rounded-full object-cover mb-3 ${borderClass} transition-transform duration-300 ease-in-out hover:scale-110`}
+                                            onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/100x100?text=No+Image'; }}
+                                        />
+                                        <p className={textSizeClass}>{creator.Name}</p>
+                                        <p className="text-md text-gray-600">{creator.Role}</p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                    {creatorDetails && (
+                        <div className="text-center mt-8 text-gray-600">
+                            <p><span className="font-semibold">Project Name:</span> {creatorDetails["Project Name"]}</p>
+                            <p><span className="font-semibold">Version:</span> {creatorDetails.Version}</p>
+                            <p><span className="font-semibold">Date:</span> {creatorDetails.Date}</p>
+                            <p className="mt-2"><span className="font-semibold">Contact:</span> <a href={`mailto:${creatorDetails.Contact}`} className="text-blue-500 hover:underline">{creatorDetails.Contact}</a></p>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // Main App Component to handle routing
+        const App = () => {
+            const [currentPage, setCurrentPage] = React.useState('dashboard'); // Default to dashboard
+
+            const renderPage = () => {
+                switch (currentPage) {
+                    case 'dashboard':
+                        return <DashboardPage />;
+                    case 'about':
+                        return <AboutPage />;
+                    case 'howitworks':
+                        return <HowItWorksPage />;
+                    case 'creators':
+                        return <CreatorsPage />;
+                    default:
+                        return <DashboardPage />;
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col">
+                    {/* Navigation Bar */}
+                    <nav className="bg-blue-800 p-4 shadow-md">
+                        <div className="container mx-auto flex justify-between items-center">
+                            <div className="text-white text-2xl font-bold">Autism Detector</div>
+                            <div className="space-x-4 flex flex-wrap justify-center"> {/* Added flex-wrap for smaller screens */}
+                                <button
+                                    onClick={() => setCurrentPage('dashboard')}
+                                    className={`py-2 px-4 rounded-lg font-semibold transition duration-300 ease-in-out ${currentPage === 'dashboard' ? 'bg-blue-600 text-white shadow-lg' : 'text-blue-200 hover:bg-blue-700 hover:text-white'}`}
+                                >
+                                    Dashboard
+                                </button>
+                                <button
+                                    onClick={() => setCurrentPage('about')}
+                                    className={`py-2 px-4 rounded-lg font-semibold transition duration-300 ease-in-out ${currentPage === 'about' ? 'bg-blue-600 text-white shadow-lg' : 'text-blue-200 hover:bg-blue-700 hover:text-white'}`}
+                                >
+                                    About Project
+                                </button>
+                                <button
+                                    onClick={() => setCurrentPage('howitworks')}
+                                    className={`py-2 px-4 rounded-lg font-semibold transition duration-300 ease-in-out ${currentPage === 'howitworks' ? 'bg-blue-600 text-white shadow-lg' : 'text-blue-200 hover:bg-blue-700 hover:text-white'}`}
+                                >
+                                    How It Works
+                                </button>
+                                <button
+                                    onClick={() => setCurrentPage('creators')}
+                                    className={`py-2 px-4 rounded-lg font-semibold transition duration-300 ease-in-out ${currentPage === 'creators' ? 'bg-blue-600 text-white shadow-lg' : 'text-blue-200 hover:bg-blue-700 hover:text-white'}`}
+                                >
+                                    Creators
+                                </button>
+                            </div>
+                        </div>
+                    </nav>
+
+                    {/* Page Content */}
+                    <main className="flex-grow container mx-auto p-4 mt-8">
+                        {renderPage()}
+                    </main>
+
+                    {/* Footer (Optional) */}
+                    <footer className="bg-gray-800 text-white text-center p-4 mt-8">
+                        <p>&copy; {new Date().getFullYear()} Autism Spectrum Disorder Detector. All rights reserved.</p>
+                    </footer>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+    {% endraw %}
+</body>
+</html>
